@@ -1,8 +1,13 @@
 # R2R FastMCP Server
 # Install: mcp install server.py -v R2R_BASE_URL=http://localhost:7272
+import os
 from typing import Any
 
 from r2r import R2RClient  # type: ignore[import-untyped]
+
+# Load environment variables
+R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://localhost:7272")
+API_KEY = os.getenv("API_KEY", "")
 
 
 def id_to_shorthand(id: str) -> str:
@@ -111,7 +116,7 @@ async def search(query: str) -> str:
     Returns:
         A response generated based on relevant context from the knowledge base
     """
-    client = R2RClient()
+    client = R2RClient(base_url=R2R_BASE_URL)
 
     # Call the RAG endpoint
     search_response = client.retrieval.search(
@@ -132,7 +137,7 @@ async def rag(query: str) -> str:
     Returns:
         A response generated based on relevant context from the knowledge base
     """
-    client = R2RClient()
+    client = R2RClient(base_url=R2R_BASE_URL, api_key=API_KEY)
 
     # Call the RAG endpoint
     rag_response = client.retrieval.rag(
@@ -144,10 +149,10 @@ async def rag(query: str) -> str:
 
 # Create ASGI application for production deployment (Uvicorn, ChatMCP, etc.)
 # path="/mcp" matches the endpoint expected by ChatMCP and other MCP clients
-app = mcp.http_app(path="/mcp")
+app = mcp.http_app()
 
 # Run the server if executed directly (for local testing)
 if __name__ == "__main__":
     # For local development, use HTTP transport
     # Accessible at http://localhost:8000/mcp
-    mcp.run(transport="http", host="0.0.0.0", port=8000, path="/mcp")
+    mcp.run()
