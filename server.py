@@ -126,7 +126,8 @@ def get_search_preset_config(preset: str) -> dict[str, Any]:
     Get search configuration for a preset.
 
     Args:
-        preset: Preset name (default, development, refactoring, debug, research, production)
+        preset: Preset name (default, development, refactoring, debug,
+                research, production)
 
     Returns:
         Dictionary with search settings
@@ -204,7 +205,8 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
     Get RAG configuration for a preset.
 
     Args:
-        preset: Preset name (default, development, refactoring, debug, research, production)
+        preset: Preset name (default, development, refactoring, debug,
+                research, production)
 
     Returns:
         Dictionary with RAG settings (search_settings and rag_generation_config)
@@ -469,10 +471,12 @@ async def search(
     include_web_search: bool = False,
 ) -> str:
     """
-    Perform comprehensive search on R2R knowledge base with full parameter control.
+    Perform comprehensive search on R2R knowledge base with full parameter
+    control.
 
-    This tool supports semantic search, hybrid search (semantic + full-text), knowledge graph search,
-    and web search. Use presets for common scenarios or customize all parameters manually.
+    This tool supports semantic search, hybrid search (semantic + full-text),
+    knowledge graph search, and web search. Use presets for common scenarios
+    or customize all parameters manually.
 
     Args:
         query: The search query to find relevant documents. Required.
@@ -484,16 +488,26 @@ async def search(
             - "research": Comprehensive search with global graph, 30 results
             - "production": Balanced hybrid search for production, 10 results
         use_semantic_search: Enable semantic/vector search (default: True)
-        use_hybrid_search: Enable hybrid search combining semantic and full-text search (default: False)
-        use_graph_search: Enable knowledge graph search for entity/relationship discovery (default: False)
-        limit: Maximum number of results to return. Must be between 1 and 100 (default: 10)
-        kg_search_type: Knowledge graph search type. "local" for local context, "global" for broader connections (default: "local")
-        semantic_weight: Weight for semantic search in hybrid mode. Must be between 0.0 and 10.0 (default: 5.0)
-        full_text_weight: Weight for full-text search in hybrid mode. Must be between 0.0 and 10.0 (default: 1.0)
-        full_text_limit: Maximum full-text results to consider in hybrid search. Must be between 1 and 1000 (default: 200)
-        rrf_k: Reciprocal Rank Fusion parameter for hybrid search. Must be between 1 and 100 (default: 50)
-        search_strategy: Advanced search strategy (e.g., "hyde", "rag_fusion"). Optional.
-        include_web_search: Include web search results from the internet (default: False)
+        use_hybrid_search: Enable hybrid search combining semantic and
+            full-text search (default: False)
+        use_graph_search: Enable knowledge graph search for
+            entity/relationship discovery (default: False)
+        limit: Maximum number of results to return. Must be between 1 and
+            100 (default: 10)
+        kg_search_type: Knowledge graph search type. "local" for local
+            context, "global" for broader connections (default: "local")
+        semantic_weight: Weight for semantic search in hybrid mode. Must be
+            between 0.0 and 10.0 (default: 5.0)
+        full_text_weight: Weight for full-text search in hybrid mode. Must
+            be between 0.0 and 10.0 (default: 1.0)
+        full_text_limit: Maximum full-text results to consider in hybrid
+            search. Must be between 1 and 1000 (default: 200)
+        rrf_k: Reciprocal Rank Fusion parameter for hybrid search. Must be
+            between 1 and 100 (default: 50)
+        search_strategy: Advanced search strategy (e.g., "hyde",
+            "rag_fusion"). Optional.
+        include_web_search: Include web search results from the internet
+            (default: False)
 
     Returns:
         Formatted search results including:
@@ -510,7 +524,12 @@ async def search(
         search("async function implementation", preset="development")
 
         # Custom hybrid search
-        search("API documentation", use_hybrid_search=True, semantic_weight=7.0, limit=20)
+        search(
+            "API documentation",
+            use_hybrid_search=True,
+            semantic_weight=7.0,
+            limit=20
+        )
 
         # Research with knowledge graph
         search("neural network architectures", preset="research")
@@ -655,37 +674,59 @@ async def rag(
     Args:
         query: The question to answer using the knowledge base. Required.
         preset: Preset configuration for common use cases. Options:
-            - "default": Basic RAG with gpt-4o-mini, temperature 0.7, 10 results
-            - "development": Hybrid search with higher temperature for creative answers, 15 results
-            - "refactoring": Hybrid + graph search with gpt-4o for code analysis, 20 results
-            - "debug": Minimal graph search with low temperature for precise answers, 5 results
-            - "research": Comprehensive search with gpt-4o for research questions, 30 results
-            - "production": Balanced hybrid search optimized for production, 10 results
+            - "default": Basic RAG with gpt-4o-mini, temperature 0.7,
+                10 results
+            - "development": Hybrid search with higher temperature for
+                creative answers, 15 results
+            - "refactoring": Hybrid + graph search with gpt-4o for code
+                analysis, 20 results
+            - "debug": Minimal graph search with low temperature for
+                precise answers, 5 results
+            - "research": Comprehensive search with gpt-4o for research
+                questions, 30 results
+            - "production": Balanced hybrid search optimized for
+                production, 10 results
         model: LLM model to use for generation. Examples:
-            - "vertex_ai/gemini-2.5-flash" (default, fast and cost-effective)
+            - "vertex_ai/gemini-2.5-flash" (default, fast and
+                cost-effective)
             - "vertex_ai/gemini-2.5-pro" (more capable, higher cost)
             - "openai/gpt-4-turbo" (high performance)
             - "anthropic/claude-3-haiku-20240307" (fast)
             - "anthropic/claude-3-sonnet-20240229" (balanced)
             - "anthropic/claude-3-opus-20240229" (most capable)
-        temperature: Generation temperature controlling randomness. Must be between 0.0 and 1.0.
+        temperature: Generation temperature controlling randomness. Must be
+            between 0.0 and 1.0.
             Lower values (0.0-0.3) = more deterministic, precise answers
-            Medium values (0.4-0.7) = balanced creativity and accuracy (default: 0.7)
+            Medium values (0.4-0.7) = balanced creativity and accuracy
+                (default: 0.7)
             Higher values (0.8-1.0) = more creative, diverse answers
-        max_tokens: Maximum number of tokens to generate. Optional, uses model default if not specified.
-        use_semantic_search: Enable semantic/vector search for retrieval (default: True)
-        use_hybrid_search: Enable hybrid search combining semantic and full-text search (default: False)
-        use_graph_search: Enable knowledge graph search for entity/relationship context (default: False)
-        limit: Maximum number of search results to retrieve. Must be between 1 and 100 (default: 10)
-        kg_search_type: Knowledge graph search type. "local" for local context, "global" for broader connections (default: "local")
-        semantic_weight: Weight for semantic search in hybrid mode. Must be between 0.0 and 10.0 (default: 5.0)
-        full_text_weight: Weight for full-text search in hybrid mode. Must be between 0.0 and 10.0 (default: 1.0)
-        full_text_limit: Maximum full-text results to consider in hybrid search. Must be between 1 and 1000 (default: 200)
-        rrf_k: Reciprocal Rank Fusion parameter for hybrid search. Must be between 1 and 100 (default: 50)
-        search_strategy: Advanced search strategy (e.g., "hyde", "rag_fusion"). Optional.
-        include_web_search: Include web search results from the internet (default: False)
-        task_prompt_override: Custom system prompt to override the default RAG task prompt.
-            Useful for specializing AI behavior for specific domains or tasks. Optional.
+        max_tokens: Maximum number of tokens to generate. Optional, uses
+            model default if not specified.
+        use_semantic_search: Enable semantic/vector search for retrieval
+            (default: True)
+        use_hybrid_search: Enable hybrid search combining semantic and
+            full-text search (default: False)
+        use_graph_search: Enable knowledge graph search for
+            entity/relationship context (default: False)
+        limit: Maximum number of search results to retrieve. Must be
+            between 1 and 100 (default: 10)
+        kg_search_type: Knowledge graph search type. "local" for local
+            context, "global" for broader connections (default: "local")
+        semantic_weight: Weight for semantic search in hybrid mode. Must be
+            between 0.0 and 10.0 (default: 5.0)
+        full_text_weight: Weight for full-text search in hybrid mode. Must
+            be between 0.0 and 10.0 (default: 1.0)
+        full_text_limit: Maximum full-text results to consider in hybrid
+            search. Must be between 1 and 1000 (default: 200)
+        rrf_k: Reciprocal Rank Fusion parameter for hybrid search. Must be
+            between 1 and 100 (default: 50)
+        search_strategy: Advanced search strategy (e.g., "hyde",
+            "rag_fusion"). Optional.
+        include_web_search: Include web search results from the internet
+            (default: False)
+        task_prompt_override: Custom system prompt to override the default
+            RAG task prompt. Useful for specializing AI behavior for specific
+            domains or tasks. Optional.
 
     Returns:
         Generated answer based on relevant context from the knowledge base.
@@ -698,10 +739,17 @@ async def rag(
         rag("How to implement async/await in Python?", preset="development")
 
         # Custom RAG with specific model and temperature
-        rag("Explain neural networks", model="vertex_ai/gemini-2.5-pro", temperature=0.5)
+        rag(
+            "Explain neural networks",
+            model="vertex_ai/gemini-2.5-pro",
+            temperature=0.5
+        )
 
         # Research preset with comprehensive search
-        rag("Latest developments in transformer architectures", preset="research")
+        rag(
+            "Latest developments in transformer architectures",
+            preset="research"
+        )
 
         # Debug preset for precise technical answers
         rag("What causes this error?", preset="debug")

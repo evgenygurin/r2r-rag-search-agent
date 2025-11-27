@@ -28,16 +28,20 @@ def create_mcp_server() -> FastMCP:
             "Without API_KEY, all R2R API requests will fail with 401 Unauthorized."
         )
 
-    # Create HTTP client for API requests
+    # Prepare headers for authentication
     headers: dict[str, str] = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
 
-    client = httpx.AsyncClient(base_url=R2R_BASE_URL, headers=headers)
+    # Create authenticated async HTTP client for API requests
+    client = httpx.AsyncClient(
+        base_url=R2R_BASE_URL,
+        headers=headers,
+        timeout=30.0,
+    )
 
     # Load OpenAPI spec synchronously for module-level initialization
-    # Note: Use the same headers for authentication
     with httpx.Client(headers=headers, timeout=10.0) as temp_client:
         # Load OpenAPI spec - this also validates server connectivity and auth
         try:
@@ -71,7 +75,7 @@ def create_mcp_server() -> FastMCP:
                     f"Response: {e.response.text[:200]}"
                 )
 
-    # Create MCP server from OpenAPI spec
+    # Create MCP server from OpenAPI spec with authenticated client
     mcp = FastMCP.from_openapi(
         openapi_spec=openapi_spec,
         client=client,
