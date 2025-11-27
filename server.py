@@ -217,7 +217,7 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
                 "limit": 10,
             },
             "rag_generation_config": {
-                "model": "openai/gpt-4o-mini",
+                "model": "vertex_ai/gemini-2.5-flash",
                 "temperature": 0.7,
             },
         },
@@ -234,7 +234,7 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
                 },
             },
             "rag_generation_config": {
-                "model": "openai/gpt-4o-mini",
+                "model": "vertex_ai/gemini-2.5-flash",
                 "temperature": 0.8,
             },
         },
@@ -253,7 +253,7 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
                 },
             },
             "rag_generation_config": {
-                "model": "openai/gpt-4o",
+                "model": "vertex_ai/gemini-2.5-pro",
                 "temperature": 0.5,
             },
         },
@@ -266,7 +266,7 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
                 "kg_search_type": "local",
             },
             "rag_generation_config": {
-                "model": "openai/gpt-4o-mini",
+                "model": "vertex_ai/gemini-2.5-flash",
                 "temperature": 0.3,
             },
         },
@@ -285,7 +285,7 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
                 },
             },
             "rag_generation_config": {
-                "model": "openai/gpt-4o",
+                "model": "vertex_ai/gemini-2.5-pro",
                 "temperature": 0.7,
             },
         },
@@ -302,7 +302,7 @@ def get_rag_preset_config(preset: str) -> dict[str, Any]:
                 },
             },
             "rag_generation_config": {
-                "model": "openai/gpt-4o-mini",
+                "model": "vertex_ai/gemini-2.5-flash",
                 "temperature": 0.6,
             },
         },
@@ -458,14 +458,14 @@ async def search(
     preset: str = "default",
     use_semantic_search: bool = True,
     use_hybrid_search: bool = False,
-    use_graph_search: bool = False,
+    use_graph_search: bool = True,
     limit: int = 10,
     kg_search_type: Literal["local", "global"] = "local",
     semantic_weight: float = 5.0,
     full_text_weight: float = 1.0,
     full_text_limit: int = 200,
     rrf_k: int = 50,
-    search_strategy: str | None = None,
+    search_strategy: str | None = "rag_fusion",
     include_web_search: bool = False,
 ) -> str:
     """
@@ -629,14 +629,14 @@ async def rag(
     query: str,
     ctx: Context,
     preset: str = "default",
-    model: str = "openai/gpt-4o-mini",
+    model: str = "vertex_ai/gemini-2.5-pro",
     temperature: float = 0.7,
-    max_tokens: int | None = None,
+    max_tokens: int | None = 8000,
     use_semantic_search: bool = True,
     use_hybrid_search: bool = False,
-    use_graph_search: bool = False,
-    limit: int = 10,
-    kg_search_type: Literal["local", "global"] = "local",
+    use_graph_search: bool = True,
+    limit: int = 100,
+    kg_search_type: Literal["local", "global"] = "global",
     semantic_weight: float = 5.0,
     full_text_weight: float = 1.0,
     full_text_limit: int = 200,
@@ -662,8 +662,8 @@ async def rag(
             - "research": Comprehensive search with gpt-4o for research questions, 30 results
             - "production": Balanced hybrid search optimized for production, 10 results
         model: LLM model to use for generation. Examples:
-            - "openai/gpt-4o-mini" (default, fast and cost-effective)
-            - "openai/gpt-4o" (more capable, higher cost)
+            - "vertex_ai/gemini-2.5-flash" (default, fast and cost-effective)
+            - "vertex_ai/gemini-2.5-pro" (more capable, higher cost)
             - "openai/gpt-4-turbo" (high performance)
             - "anthropic/claude-3-haiku-20240307" (fast)
             - "anthropic/claude-3-sonnet-20240229" (balanced)
@@ -698,7 +698,7 @@ async def rag(
         rag("How to implement async/await in Python?", preset="development")
 
         # Custom RAG with specific model and temperature
-        rag("Explain neural networks", model="openai/gpt-4o", temperature=0.5)
+        rag("Explain neural networks", model="vertex_ai/gemini-2.5-pro", temperature=0.5)
 
         # Research preset with comprehensive search
         rag("Latest developments in transformer architectures", preset="research")
@@ -792,9 +792,9 @@ async def rag(
         # Build RAG generation config
         rag_model = (
             model
-            if model != "openai/gpt-4o-mini"
+            if model != "vertex_ai/gemini-2.5-flash"
             else preset_config["rag_generation_config"].get(
-                "model", "openai/gpt-4o-mini"
+                "model", "vertex_ai/gemini-2.5-flash"
             )
         )
         rag_temp = (

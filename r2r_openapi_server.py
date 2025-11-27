@@ -70,9 +70,8 @@ async def run_with_gemini(query: str, model: str = "gemini-2.0-flash") -> str:
             "GEMINI_API_KEY not set. Please configure it in .env file or environment."
         )
 
-    # Create MCP client pointing to simplified server.py (2 tools: search, rag)
-    # Note: Using server.py instead of __file__ to avoid complex OpenAPI schemas
-    mcp_client = Client("server.py")
+    # Create MCP client pointing to this server
+    mcp_client = Client(__file__)
 
     # Create Gemini client
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
@@ -91,16 +90,17 @@ async def run_with_gemini(query: str, model: str = "gemini-2.0-flash") -> str:
 
 
 if __name__ == "__main__":
-    # Check if running in Gemini mode
-    if len(sys.argv) > 1 and sys.argv[1] == "--gemini":
-        # Gemini mode: run query through Gemini with MCP tools
-        if len(sys.argv) < 3:
-            print("Usage: python r2r_openapi_server.py --gemini 'your query here'")
-            sys.exit(1)
+    mcp.run()
+    # # Check if running in Gemini mode
+    # if len(sys.argv) > 1 and sys.argv[1] == "--gemini":
+    #     # Gemini mode: run query through Gemini with MCP tools
+    #     if len(sys.argv) < 3:
+    #         print("Usage: python r2r_openapi_server.py --gemini 'your query here'")
+    #         sys.exit(1)
 
-        query = sys.argv[2]
-        result = asyncio.run(run_with_gemini(query))
-        print(f"\nGemini Response:\n{result}\n")
-    else:
-        # MCP server mode (default)
-        mcp.run()
+    #     query = sys.argv[2]
+    #     result = asyncio.run(run_with_gemini(query))
+    #     print(f"\nGemini Response:\n{result}\n")
+    # else:
+    #     # MCP server mode (default)
+    #     mcp.run()
