@@ -4,9 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🎯 Обзор проекта
 
-MCP-сервер для интеграции R2R (Retrieval-Augmented Generation) с Claude Desktop через Model Context Protocol. Предоставляет два основных инструмента:
-- `search` — векторный и граф-поиск по базе знаний R2R
+MCP-сервер для интеграции R2R (Retrieval-Augmented Generation) с Claude Desktop через Model Context Protocol.
+
+### Доступные инструменты (Tools)
+
+**Базовые:**
+- `search` — векторный поиск по базе знаний R2R с логированием и progress tracking
 - `rag` — полноценный RAG-запрос с генерацией ответа
+
+**Расширенные:**
+- `advanced_search` — поиск с hybrid search (семантический + full-text), настраиваемыми весами и фильтрами
+- `graph_search` — поиск с интеграцией knowledge graph для улучшенных результатов
+- `advanced_rag` — RAG с настройками модели, температуры, hybrid search и веб-поиском
+
+### Доступные ресурсы (Resources)
+
+- `r2r://config` — текущая конфигурация сервера (URL, API key status)
+- `r2r://health` — проверка здоровья и доступности R2R сервера
+
+### Ключевые особенности
+
+- **Context-aware logging**: Все инструменты используют FastMCP Context для логирования и отслеживания прогресса
+- **Error handling middleware**: Централизованная обработка ошибок с детальным логированием
+- **Tool annotations**: Метаданные для клиентов (readOnlyHint, idempotentHint, etc.)
+- **Progress reporting**: Визуальное отслеживание выполнения длительных операций
 
 ### Структура проекта
 
@@ -33,13 +54,26 @@ r2r-rag-search-agent/
 - server.py:105 — инициализация FastMCP сервера
 - server.py:154 — экспорт ASGI приложения для production (`app = mcp.http_app(transport="streamable-http", path="/mcp")`)
 
-**Структура форматирования результатов (server.py:16-94):**
+**Структура форматирования результатов (server.py:22-91):**
 - `format_search_results_for_llm()` агрегирует 4 типа результатов:
   - Chunk search (векторный поиск по фрагментам)
   - Graph search (граф сущностей/отношений)
   - Web search (поиск в интернете)
   - Document search (локальные документы с чанками)
 - Короткие ID через `id_to_shorthand()` для экономии токенов (первые 7 символов)
+
+**Error Handling Middleware (server.py:105-133):**
+- `R2RErrorHandlingMiddleware` перехватывает все ошибки в MCP операциях
+- Логирует ошибки с контекстом (тип ошибки, метод, детали)
+- Отслеживает статистику ошибок по типам
+- Специальная обработка R2R connection errors с понятными сообщениями
+
+**Context Integration (server.py:136+):**
+- Все tools используют `Context` для:
+  - Логирования (`ctx.info()`, `ctx.error()`, `ctx.debug()`)
+  - Progress reporting (`ctx.report_progress(progress, total, message)`)
+  - Request tracking (`ctx.request_id`)
+- Context автоматически инжектится через type hint `ctx: Context`
 
 ## 🛠️ Команды разработки
 
@@ -151,16 +185,173 @@ make fix
 
 После установки в Claude Desktop, проверь доступность:
 1. Открой Claude Desktop
-2. Проверь Tools → должны появиться `search` и `rag`
-3. Тестовый запрос: "Search for information about X"
+2. Проверь Tools → должны появиться 5 инструментов и 2 ресурса
+3. Тестовые запросы:
+   - "Search for information about X"
+   - "Use advanced search with hybrid mode for Y"
+   - "Search knowledge graph for connections between A and B"
+
+## 📚 Документация инструментов
+
+### Базовые инструменты
+
+#### `search(query: str) -> str`
+**Описание:** Базовый семантический поиск по R2R knowledge base
+**Annotations:** readOnlyHint=True, idempotentHint=True, openWorldHint=True
+**Progress tracking:** 10% → 30% → 80% → 100%
+
+```python
+# Пример использования
+result = await search("What is deep learning?")
+```
+
+**Возвращает:** Форматированные результаты включая vector, graph, web и document results
+
+#### `rag(query: str) -> str`
+**Описание:** Полноценный RAG-запрос с генерацией ответа
+**Annotations:** readOnlyHint=False, destructiveHint=False, openWorldHint=True
+**Progress tracking:** 20% → 40% → 90% → 100%
+
+```python
+# Пример использования
+answer = await rag("Explain the concept of neural networks")
+```
+
+**Возвращает:** Сгенерированный ответ на основе релевантного контекста
+
+### Расширенные инструменты
+
+#### `advanced_search(query, use_hybrid_search=False, semantic_weight=5.0, full_text_weight=1.0, limit=10) -> str`
+**Описание:** Поиск с hybrid search и настраиваемыми параметрами
+**Annotations:** readOnlyHint=True, openWorldHint=True
+
+**Параметры:**
+- `use_hybrid_search` (bool): Включить hybrid search (semantic + full-text)
+- `semantic_weight` (float): Вес для semantic search (default: 5.0)
+- `full_text_weight` (float): Вес для full-text search (default: 1.0)
+- `limit` (int): Максимальное количество результатов (default: 10)
+
+```python
+# Пример с hybrid search
+result = await advanced_search(
+    query="quantum computing applications",
+    use_hybrid_search=True,
+    semantic_weight=7.0,
+    full_text_weight=3.0,
+    limit=15
+)
+```
+
+**Конфигурация hybrid_settings:**
+- `full_text_limit`: 200 (количество full-text результатов для обработки)
+- `rrf_k`: 50 (параметр Reciprocal Rank Fusion)
+
+#### `graph_search(query, enable_graph=True, kg_search_type="local") -> str`
+**Описание:** Поиск с интеграцией knowledge graph
+**Annotations:** readOnlyHint=True, openWorldHint=True
+
+**Параметры:**
+- `enable_graph` (bool): Включить knowledge graph integration
+- `kg_search_type` (str): Тип graph search ("local" или "global")
+
+```python
+# Пример с knowledge graph
+result = await graph_search(
+    query="relationships between machine learning concepts",
+    enable_graph=True,
+    kg_search_type="local"
+)
+```
+
+**Особенности:**
+- `limit` автоматически установлен в 20 для лучшего покрытия graph results
+- Возвращает entities, relationships и communities из knowledge graph
+
+#### `advanced_rag(query, model="openai/gpt-4o-mini", temperature=0.7, use_hybrid_search=False, include_web_search=False) -> str`
+**Описание:** RAG с настраиваемой генерацией
+**Annotations:** readOnlyHint=False, destructiveHint=False, openWorldHint=True
+
+**Параметры:**
+- `model` (str): LLM модель для генерации (default: "openai/gpt-4o-mini")
+- `temperature` (float): Температура генерации 0.0-1.0 (default: 0.7)
+- `use_hybrid_search` (bool): Включить hybrid search для retrieval
+- `include_web_search` (bool): Включить web search results
+
+```python
+# Пример с Claude и веб-поиском
+answer = await advanced_rag(
+    query="Latest developments in AI safety",
+    model="anthropic/claude-3-haiku-20240307",
+    temperature=0.5,
+    use_hybrid_search=True,
+    include_web_search=True
+)
+```
+
+**Доступные модели:**
+- OpenAI: `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`
+- Anthropic: `anthropic/claude-3-haiku-20240307`, `anthropic/claude-3-sonnet-20240229`
+- И другие LLM провайдеры, поддерживаемые R2R
+
+### Ресурсы
+
+#### `r2r://config`
+**Описание:** Текущая конфигурация сервера
+
+**Возвращает:**
+```json
+{
+  "r2r_base_url": "http://localhost:7272",
+  "api_key_configured": true,
+  "request_id": "req-123...",
+  "server_name": "R2R Retrieval System"
+}
+```
+
+#### `r2r://health`
+**Описание:** Проверка здоровья R2R сервера
+
+**Возвращает (healthy):**
+```json
+{
+  "status": "healthy",
+  "r2r_url": "http://localhost:7272",
+  "timestamp": "req-123...",
+  "api_key_configured": true
+}
+```
+
+**Возвращает (unhealthy):**
+```json
+{
+  "status": "unhealthy",
+  "error": "connection refused",
+  "r2r_url": "http://localhost:7272"
+}
+```
 
 ## 🔧 Интеграция с R2R
 
 ### R2RClient настройки
 
-- Клиент инициализируется для каждого запроса (server.py:124, 145)
+- Клиент инициализируется для каждого запроса
 - Использует переменные окружения из `.env`
 - Базовый URL: `R2R_BASE_URL` (по умолчанию http://localhost:7272)
+- API Key аутентификация: `client.set_api_key(API_KEY)` если API_KEY установлен
+
+### Context Integration
+
+Все инструменты используют FastMCP Context для:
+- **Логирования:** `await ctx.info()`, `await ctx.error()`, `await ctx.debug()`
+- **Progress reporting:** `await ctx.report_progress(progress, total, message)`
+- **Request tracking:** `ctx.request_id` для отслеживания запросов
+
+**Пример из search():**
+```python
+await ctx.info(f"Starting search query: {query}")
+await ctx.report_progress(progress=30, total=100, message="Executing search")
+await ctx.info(f"Search completed successfully, returned {len(formatted)} chars")
+```
 
 ### Типы поисковых результатов
 
@@ -197,9 +388,27 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 ### Обработка ошибок
 
-- ImportError для MCP (server.py:104-106) с понятным сообщением
-- НЕТ явной обработки ошибок R2R API — клиент бросит исключение при недоступности
-- При разработке добавь try/except в `search()` и `rag()` для production-готовности
+**R2RErrorHandlingMiddleware:**
+- Централизованная обработка всех ошибок на уровне middleware
+- Логирование ошибок с полным контекстом (метод, тип ошибки, детали)
+- Отслеживание статистики ошибок по типам
+- Специальная обработка R2R connection errors:
+  ```python
+  ConnectionError(
+      f"Failed to connect to R2R server at {R2R_BASE_URL}. "
+      "Please check R2R_BASE_URL and ensure R2R is running."
+  )
+  ```
+
+**Tool-level error handling:**
+- Все tools используют `try/except` с Context логированием
+- Ошибки перебрасываются после логирования для обработки клиентом
+- Пример:
+  ```python
+  except Exception as e:
+      await ctx.error(f"Search failed: {e!s}")
+      raise
+  ```
 
 ### Типизация и async
 
