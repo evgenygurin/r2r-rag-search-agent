@@ -20,20 +20,22 @@ from google import genai  # noqa: E402
 
 def create_mcp_server() -> FastMCP:
     """Create and configure MCP server with OpenAPI spec."""
-    # Validate API_KEY is set
+    # Warn if API_KEY is not set (optional for R2R instances without auth)
     if not API_KEY:
-        raise ValueError(
-            "API_KEY is not set. Please configure it in .env file or "
-            "environment variables.\n"
-            "Without API_KEY, all R2R API requests will fail with "
-            "401 Unauthorized."
+        import warnings
+
+        warnings.warn(
+            "API_KEY is not set. R2R API requests may fail with 401 "
+            "Unauthorized if the R2R server requires authentication. "
+            "Configure API_KEY in environment variables if needed.",
+            stacklevel=2,
         )
 
     # Prepare headers for authentication (same format as R2R SDK)
-    headers: dict[str, str] = {
-        "x-api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
+    # Only include x-api-key if API_KEY is set
+    headers: dict[str, str] = {"Content-Type": "application/json"}
+    if API_KEY:
+        headers["x-api-key"] = API_KEY
 
     # Create authenticated async HTTP client for API requests
     client = httpx.AsyncClient(
