@@ -74,8 +74,9 @@ def create_mcp_server() -> FastMCP:
             if "security" in openapi_spec:
                 openapi_spec["security"] = [{"APIKeyHeader": []}]
 
-            # КРИТИЧНО: Обновляем security requirements на уровне каждой операции
-            # FastMCP использует security из operations, не только глобальные
+            # КРИТИЧНО: УДАЛЯЕМ все security requirements на уровне операций
+            # Оставляем только глобальный security, чтобы избежать конфликтов
+            removed_count = 0
             if "paths" in openapi_spec:
                 for path_item in openapi_spec["paths"].values():
                     for method, operation in path_item.items():
@@ -93,7 +94,26 @@ def create_mcp_server() -> FastMCP:
                             and isinstance(operation, dict)
                             and "security" in operation
                         ):
-                            operation["security"] = [{"APIKeyHeader": []}]
+                            # Полностью удаляем security на уровне операции
+                            # Операция будет использовать глобальный security
+                            del operation["security"]
+                            removed_count += 1
+
+            import sys
+
+            print(
+                f"[OpenAPI] Removed security from {removed_count} operations",
+                file=sys.stderr,
+            )
+            print(
+                f"[OpenAPI] Global security: {openapi_spec.get('security', [])}",
+                file=sys.stderr,
+            )
+            schemes = openapi_spec.get("components", {}).get("securitySchemes", {})
+            print(
+                f"[OpenAPI] Security schemes: {list(schemes.keys())}",
+                file=sys.stderr,
+            )
 
         except httpx.ConnectError as e:
             raise ConnectionError(

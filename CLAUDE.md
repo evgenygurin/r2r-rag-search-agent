@@ -717,10 +717,15 @@ FastMCP автоматически логирует вызовы инструм�
    - **Решение:**
      - Модифицировать OpenAPI spec перед передачей в `FastMCP.from_openapi()`
      - Удалить HTTPBearer и OAuth2PasswordBearer схемы, оставив только APIKeyHeader
-     - Обновить security requirements на глобальном уровне: `openapi_spec["security"] = [{"APIKeyHeader": []}]`
-     - **КРИТИЧНО:** Обновить security requirements на уровне каждой операции (endpoint), т.к. FastMCP использует operation-level security
-     - См. r2r_openapi_server.py:57-82 для полного кода исправления
-   - **Проверка:** После деплоя проверь, что вызовы MCP инструментов не возвращают 400 с этой ошибкой
+     - Установить security requirements на глобальном уровне: `openapi_spec["security"] = [{"APIKeyHeader": []}]`
+     - **КРИТИЧНО:** УДАЛИТЬ все security requirements на уровне операций (endpoints), чтобы они использовали только глобальный security
+     - См. r2r_openapi_server.py:59-116 для полного кода исправления
+   - **Диагностика:** При старте сервера проверь логи:
+     ```
+     [OpenAPI] Removed security from N operations
+     [OpenAPI] Global security: [{'APIKeyHeader': []}]
+     [OpenAPI] Security schemes: ['APIKeyHeader']
+     ```
    - **Важно:** R2R SDK использует `x-api-key` header для API ключей (не `Authorization: Bearer`)
 
 11. **`litellm.BadRequestError: VertexAIException - Unable to submit request because at least one contents field is required`**
