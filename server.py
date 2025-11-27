@@ -137,7 +137,7 @@ async def rag(query: str) -> str:
     Returns:
         A response generated based on relevant context from the knowledge base
     """
-    client = R2RClient(base_url=R2R_BASE_URL, api_key=API_KEY)
+    client = R2RClient(base_url=R2R_BASE_URL)
 
     # Call the RAG endpoint
     rag_response = client.retrieval.rag(
