@@ -13,7 +13,7 @@ from r2r import R2RClient  # type: ignore[import-untyped]
 load_dotenv()
 
 # Configuration
-R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://localhost:7272")
+R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://127.0.0.1:7272")
 API_KEY = os.getenv("API_KEY", "")
 
 # Logging setup
