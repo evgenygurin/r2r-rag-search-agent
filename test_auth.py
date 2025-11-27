@@ -29,7 +29,7 @@ async def test_auth():
         sys.exit(1)
 
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "x-api-key": API_KEY,
         "Content-Type": "application/json",
     }
 

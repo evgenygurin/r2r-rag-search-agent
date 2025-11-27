@@ -43,15 +43,16 @@ async def test_mcp_server():
         print(f"   Base URL: {client.base_url}")
         print(f"   Headers: {dict(client.headers)}")
 
-        # Проверяем наличие Authorization header
-        if "Authorization" in client.headers:
-            auth_header = client.headers["Authorization"]
-            if auth_header.startswith("Bearer "):
-                print(f"✅ Authorization header присутствует и валиден")
+        # Проверяем наличие x-api-key header (R2R SDK формат)
+        if "x-api-key" in client.headers:
+            api_key = client.headers["x-api-key"]
+            if api_key:
+                print(f"✅ x-api-key header присутствует и валиден")
+                print(f"   Формат: R2R SDK стандартный (x-api-key вместо Authorization)")
             else:
-                print(f"⚠️  Authorization header есть, но не Bearer формат")
+                print(f"⚠️  x-api-key header пустой")
         else:
-            print(f"❌ Authorization header ОТСУТСТВУЕТ!")
+            print(f"❌ x-api-key header ОТСУТСТВУЕТ!")
             return False
     except Exception as e:
         print(f"❌ Ошибка проверки client: {e}")
@@ -118,7 +119,7 @@ async def test_mcp_server():
     print(f"   • MCP сервер: {mcp.name}")
     print(f"   • Инструментов: {len(tools)}")
     print(f"   • AsyncClient настроен с аутентификацией")
-    print(f"   • Authorization header: Bearer ***")
+    print(f"   • x-api-key header: *** (R2R SDK формат)")
     print()
     print("🎉 Исправление аутентификации работает корректно!")
     return True
