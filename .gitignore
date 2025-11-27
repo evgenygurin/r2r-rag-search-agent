@@ -32,8 +32,7 @@ venv/
 ENV/
 env/
 
-# uv
-uv.lock
+# uv (lock file included for production reproducibility)
 
 # IDE
 .vscode/

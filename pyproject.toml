@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server for R2R (Retrieval-Augmented Generation) integration with Claude Desktop"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp>=1.2.0",
+    "fastmcp==2.13.1",
     "r2r>=3.6.0",
 ]
 
