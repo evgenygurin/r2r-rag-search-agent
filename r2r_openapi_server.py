@@ -29,9 +29,9 @@ def create_mcp_server() -> FastMCP:
             "Without API_KEY, all R2R API requests will fail with 401 Unauthorized."
         )
 
-    # Prepare headers for authentication
+    # Prepare headers for authentication (same format as R2R SDK)
     headers: dict[str, str] = {
-        "Authorization": f"Bearer {API_KEY}",
+        "x-api-key": API_KEY,
         "Content-Type": "application/json",
     }
 
