@@ -16,6 +16,7 @@ API_KEY = os.getenv("API_KEY", "")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("r2r-mcp")
 
+
 # Helper functions
 def id_to_shorthand(id: str) -> str:
     return str(id)[:7]
@@ -408,7 +409,7 @@ async def get_r2r_config(ctx: Context) -> str:
         "r2r_base_url": R2R_BASE_URL,
         "api_key_configured": bool(API_KEY),
         "request_id": ctx.request_id,
-        "server_name": "R2R Retrieval System"
+        "server_name": "R2R Retrieval System",
     }
 
     return json.dumps(config, indent=2)
@@ -429,16 +430,12 @@ async def check_r2r_health(ctx: Context) -> str:
             "status": "healthy",
             "r2r_url": R2R_BASE_URL,
             "timestamp": ctx.request_id,
-            "api_key_configured": bool(API_KEY)
+            "api_key_configured": bool(API_KEY),
         }
         return json.dumps(health_data, indent=2)
     except Exception as e:
         await ctx.error(f"Health check failed: {e!s}")
-        error_data = {
-            "status": "unhealthy",
-            "error": str(e),
-            "r2r_url": R2R_BASE_URL
-        }
+        error_data = {"status": "unhealthy", "error": str(e), "r2r_url": R2R_BASE_URL}
         return json.dumps(error_data, indent=2)
 
 
@@ -448,7 +445,7 @@ async def check_r2r_health(ctx: Context) -> str:
         "title": "R2R Search",
         "readOnlyHint": True,
         "idempotentHint": True,
-        "openWorldHint": True
+        "openWorldHint": True,
     }
 )
 async def search(
@@ -534,13 +531,21 @@ async def search(
 
         # Get preset configuration and merge with explicit parameters
         preset_config = get_search_preset_config(preset)
-        
+
         # Apply preset values, but allow explicit parameters to override
         # For boolean flags: if preset enables it, use it unless explicitly disabled
         # For numeric: use preset if value is default, otherwise use explicit value
-        final_use_hybrid = use_hybrid_search if preset == "default" else (use_hybrid_search or preset_config.get("use_hybrid_search", False))
-        final_use_graph = use_graph_search if preset == "default" else (use_graph_search or preset_config.get("use_graph_search", False))
-        
+        final_use_hybrid = (
+            use_hybrid_search
+            if preset == "default"
+            else (use_hybrid_search or preset_config.get("use_hybrid_search", False))
+        )
+        final_use_graph = (
+            use_graph_search
+            if preset == "default"
+            else (use_graph_search or preset_config.get("use_graph_search", False))
+        )
+
         search_settings: dict[str, Any] = {
             "use_semantic_search": use_semantic_search,
             "limit": limit,
@@ -551,16 +556,28 @@ async def search(
             search_settings["use_hybrid_search"] = True
             hybrid_config = preset_config.get("hybrid_settings", {})
             search_settings["hybrid_settings"] = {
-                "semantic_weight": semantic_weight if semantic_weight != 5.0 or preset == "default" else hybrid_config.get("semantic_weight", 5.0),
-                "full_text_weight": full_text_weight if full_text_weight != 1.0 or preset == "default" else hybrid_config.get("full_text_weight", 1.0),
-                "full_text_limit": full_text_limit if full_text_limit != 200 or preset == "default" else hybrid_config.get("full_text_limit", 200),
-                "rrf_k": rrf_k if rrf_k != 50 or preset == "default" else hybrid_config.get("rrf_k", 50),
+                "semantic_weight": semantic_weight
+                if semantic_weight != 5.0 or preset == "default"
+                else hybrid_config.get("semantic_weight", 5.0),
+                "full_text_weight": full_text_weight
+                if full_text_weight != 1.0 or preset == "default"
+                else hybrid_config.get("full_text_weight", 1.0),
+                "full_text_limit": full_text_limit
+                if full_text_limit != 200 or preset == "default"
+                else hybrid_config.get("full_text_limit", 200),
+                "rrf_k": rrf_k
+                if rrf_k != 50 or preset == "default"
+                else hybrid_config.get("rrf_k", 50),
             }
             await ctx.info("Hybrid search enabled")
 
         # Apply graph search settings
         if final_use_graph:
-            kg_type = kg_search_type if kg_search_type != "local" or preset == "default" else preset_config.get("kg_search_type", "local")
+            kg_type = (
+                kg_search_type
+                if kg_search_type != "local" or preset == "default"
+                else preset_config.get("kg_search_type", "local")
+            )
             search_settings["graph_search_settings"] = {
                 "use_graph_search": True,
                 "kg_search_type": kg_type,
@@ -575,8 +592,7 @@ async def search(
         await ctx.report_progress(progress=30, total=100, message="Executing search")
 
         search_response = client.retrieval.search(
-            query=query,
-            search_settings=search_settings
+            query=query, search_settings=search_settings
         )
 
         await ctx.report_progress(progress=80, total=100, message="Formatting results")
@@ -602,7 +618,7 @@ async def search(
         "title": "R2R RAG",
         "readOnlyHint": False,
         "destructiveHint": False,
-        "openWorldHint": True
+        "openWorldHint": True,
     }
 )
 async def rag(
@@ -707,11 +723,25 @@ async def rag(
 
         # Get preset configuration and merge with explicit parameters
         preset_config = get_rag_preset_config(preset)
-        
+
         # Apply preset values, but allow explicit parameters to override
-        final_use_hybrid = use_hybrid_search if preset == "default" else (use_hybrid_search or preset_config["search_settings"].get("use_hybrid_search", False))
-        final_use_graph = use_graph_search if preset == "default" else (use_graph_search or preset_config["search_settings"].get("use_graph_search", False))
-        
+        final_use_hybrid = (
+            use_hybrid_search
+            if preset == "default"
+            else (
+                use_hybrid_search
+                or preset_config["search_settings"].get("use_hybrid_search", False)
+            )
+        )
+        final_use_graph = (
+            use_graph_search
+            if preset == "default"
+            else (
+                use_graph_search
+                or preset_config["search_settings"].get("use_graph_search", False)
+            )
+        )
+
         search_settings: dict[str, Any] = {
             "use_semantic_search": use_semantic_search,
             "limit": limit,
@@ -722,16 +752,28 @@ async def rag(
             search_settings["use_hybrid_search"] = True
             hybrid_config = preset_config["search_settings"].get("hybrid_settings", {})
             search_settings["hybrid_settings"] = {
-                "semantic_weight": semantic_weight if semantic_weight != 5.0 or preset == "default" else hybrid_config.get("semantic_weight", 5.0),
-                "full_text_weight": full_text_weight if full_text_weight != 1.0 or preset == "default" else hybrid_config.get("full_text_weight", 1.0),
-                "full_text_limit": full_text_limit if full_text_limit != 200 or preset == "default" else hybrid_config.get("full_text_limit", 200),
-                "rrf_k": rrf_k if rrf_k != 50 or preset == "default" else hybrid_config.get("rrf_k", 50),
+                "semantic_weight": semantic_weight
+                if semantic_weight != 5.0 or preset == "default"
+                else hybrid_config.get("semantic_weight", 5.0),
+                "full_text_weight": full_text_weight
+                if full_text_weight != 1.0 or preset == "default"
+                else hybrid_config.get("full_text_weight", 1.0),
+                "full_text_limit": full_text_limit
+                if full_text_limit != 200 or preset == "default"
+                else hybrid_config.get("full_text_limit", 200),
+                "rrf_k": rrf_k
+                if rrf_k != 50 or preset == "default"
+                else hybrid_config.get("rrf_k", 50),
             }
             await ctx.info("Hybrid search enabled for RAG")
 
         # Apply graph search settings
         if final_use_graph:
-            kg_type = kg_search_type if kg_search_type != "local" or preset == "default" else preset_config["search_settings"].get("kg_search_type", "local")
+            kg_type = (
+                kg_search_type
+                if kg_search_type != "local" or preset == "default"
+                else preset_config["search_settings"].get("kg_search_type", "local")
+            )
             search_settings["graph_search_settings"] = {
                 "use_graph_search": True,
                 "kg_search_type": kg_type,
@@ -744,8 +786,18 @@ async def rag(
             await ctx.info(f"Search strategy: {search_strategy}")
 
         # Build RAG generation config
-        rag_model = model if model != "openai/gpt-4o-mini" else preset_config["rag_generation_config"].get("model", "openai/gpt-4o-mini")
-        rag_temp = temperature if temperature != 0.7 else preset_config["rag_generation_config"].get("temperature", 0.7)
+        rag_model = (
+            model
+            if model != "openai/gpt-4o-mini"
+            else preset_config["rag_generation_config"].get(
+                "model", "openai/gpt-4o-mini"
+            )
+        )
+        rag_temp = (
+            temperature
+            if temperature != 0.7
+            else preset_config["rag_generation_config"].get("temperature", 0.7)
+        )
         rag_generation_config: dict[str, Any] = {
             "model": rag_model,
             "temperature": rag_temp,
@@ -765,10 +817,12 @@ async def rag(
             }
             if task_prompt_override:
                 rag_kwargs["task_prompt"] = task_prompt_override
-            
+
             rag_response = client.retrieval.rag(**rag_kwargs)
 
-            await ctx.report_progress(progress=90, total=100, message="Generating answer")
+            await ctx.report_progress(
+                progress=90, total=100, message="Generating answer"
+            )
 
             answer = rag_response.results.generated_answer  # type: ignore
 

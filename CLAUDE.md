@@ -94,16 +94,27 @@ r2r-rag-search-agent/
 ### Makefile команды (предпочтительный способ)
 
 ```bash
-make install    # Установка всех зависимостей (production + dev) через uv
-make sync       # Синхронизация зависимостей из pyproject.toml
-make dev        # Установка только dev зависимостей
-make lint       # Полная проверка (format + typecheck)
-make fix        # Автоисправление ruff проблем
-make format     # Форматирование кода ruff
-make typecheck  # Проверка типов mypy
-make run        # Запуск MCP сервера через uv run
-make clean      # Очистка кэша и виртуального окружения
-make help       # Справка по командам
+# Установка и управление зависимостями
+make install      # Установка всех зависимостей (production + dev) через uv
+make sync         # Синхронизация зависимостей из pyproject.toml
+make dev          # Установка только dev зависимостей
+
+# Проверка качества кода
+make lint         # Полная проверка (format + typecheck)
+make fix          # Автоисправление ruff проблем
+make format       # Форматирование кода ruff
+make typecheck    # Проверка типов mypy
+
+# Запуск серверов
+make run          # Запуск custom MCP server (server.py)
+make run-openapi  # Запуск OpenAPI MCP server в stdio режиме
+make run-http     # Запуск OpenAPI MCP server в HTTP режиме (порт 8000)
+make run-gemini   # Запуск Gemini интеграции (интерактивный режим)
+make run-inspector # Запуск MCP Inspector (GUI для тестирования инструментов)
+
+# Утилиты
+make clean        # Очистка кэша и виртуального окружения
+make help         # Справка по командам
 ```
 
 **Важно:** Проект использует `uv` для управления зависимостями и виртуальным окружением. Все команды запускаются через `uv run`.
@@ -165,6 +176,152 @@ mcp install r2r_openapi_server.py -v R2R_BASE_URL=http://localhost:7272
 - r2r_openapi_server.py:4 — включение нового парсера через `os.environ` ДО импортов
 - r2r_openapi_server.py:18-40 — синхронная загрузка OpenAPI spec и создание сервера
 
+### Gemini интеграция
+
+**Описание:**
+`r2r_openapi_server.py` поддерживает прямую интеграцию с Google Gemini SDK через FastMCP Client. Это позволяет использовать все 114 R2R API инструментов в Gemini без необходимости запуска отдельного MCP сервера.
+
+**Архитектура:**
+- Gemini SDK напрямую взаимодействует с MCP Client session (r2r_openapi_server.py:54-89)
+- FastMCP Client создаётся в stdio режиме, указывая на текущий файл
+- Gemini автоматически вызывает MCP tools при необходимости
+- Поддержка всех Gemini моделей (gemini-2.0-flash, gemini-1.5-pro и т.д.)
+
+**Запуск через CLI:**
+
+```bash
+# Базовый запрос
+python r2r_openapi_server.py --gemini "Search for information about neural networks"
+
+# Пример вывода:
+# Gemini Response:
+# Based on the R2R knowledge base search, neural networks are...
+```
+
+**Программное использование:**
+
+```python
+import asyncio
+from r2r_openapi_server import run_with_gemini
+
+# Базовый запрос с дефолтной моделью (gemini-2.0-flash)
+result = asyncio.run(run_with_gemini(
+    "Search for information about quantum computing"
+))
+
+# С кастомной моделью
+result = asyncio.run(run_with_gemini(
+    "Analyze machine learning trends",
+    model="gemini-1.5-pro"
+))
+```
+
+**Конфигурация:**
+
+1. Получи Gemini API ключ: https://aistudio.google.com/apikey
+2. Добавь в `.env` файл:
+   ```bash
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+3. Убедись, что `R2R_BASE_URL` и `API_KEY` также настроены
+
+**Особенности:**
+
+- **Автоматический вызов tools:** Gemini самостоятельно решает, когда использовать R2R инструменты
+- **114 доступных инструментов:** Полный R2R API доступен через автогенерацию из OpenAPI spec
+- **Температура настраивается:** Дефолт 0.7, можно изменить в `run_with_gemini()`
+- **Async-native:** Вся интеграция построена на asyncio для производительности
+
+**Workflow:**
+
+1. Gemini получает запрос пользователя
+2. Анализирует, нужны ли данные из R2R
+3. Автоматически вызывает нужные MCP tools (search, rag и т.д.)
+4. Получает результаты и формирует финальный ответ
+5. Возвращает сгенерированный текст пользователю
+
+**Важно:**
+- Требуется google-genai>=0.2.0 (добавлена в pyproject.toml)
+- MCP Client создаётся с `__file__`, поэтому работает только из директории проекта
+- Gemini SDK требует `GEMINI_API_KEY` в переменных окружения
+- r2r_openapi_server.py:54-89 — реализация `run_with_gemini()`
+- r2r_openapi_server.py:92-105 — CLI интерфейс для Gemini режима
+
+### MCP Inspector (GUI для тестирования)
+
+**Описание:**
+MCP Inspector - официальный инструмент от Anthropic для визуального тестирования MCP серверов. Предоставляет веб-интерфейс для вызова инструментов, просмотра ресурсов и отладки.
+
+**Установка:**
+
+MCP Inspector работает через npx без установки:
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+Или установи глобально:
+```bash
+npm install -g @modelcontextprotocol/inspector
+```
+
+**Запуск:**
+
+```bash
+# Через Makefile (рекомендуется)
+make run-inspector
+
+# Или напрямую
+npx @modelcontextprotocol/inspector uv run python r2r_openapi_server.py
+```
+
+**Что происходит:**
+
+1. Запускается веб-сервер на `http://localhost:5173`
+2. Автоматически открывается браузер с GUI интерфейсом
+3. MCP сервер запускается в фоне и подключается к Inspector
+
+**Возможности Inspector:**
+
+- **Tools tab:** Просмотр всех 114 инструментов с документацией
+- **Test tools:** Вызов любого инструмента с параметрами через GUI
+- **Resources tab:** Просмотр доступных ресурсов (r2r://config, r2r://health)
+- **Logs:** Реалтайм логи всех операций MCP сервера
+- **JSON inspector:** Просмотр сырых JSON ответов от инструментов
+
+**Workflow тестирования:**
+
+1. Запусти `make run-inspector`
+2. Открой браузер на `http://localhost:5173`
+3. Выбери инструмент в списке (например, `retrieval_search`)
+4. Заполни параметры в форме (query, settings и т.д.)
+5. Нажми "Call Tool"
+6. Просмотри результат в JSON или форматированном виде
+7. Проверь логи на наличие ошибок
+
+**Пример тестирования search:**
+
+1. Tools → `retrieval_search`
+2. Параметры:
+   ```json
+   {
+     "query": "neural networks",
+     "search_settings": {
+       "use_vector_search": true,
+       "filters": {},
+       "limit": 10
+     }
+   }
+   ```
+3. Call Tool
+4. Результат покажет vector search results из R2R
+
+**Важно:**
+- Требует Node.js и npm/npx в системе
+- MCP Inspector работает только с stdio транспортом
+- Для тестирования HTTP сервера используй Postman или curl
+- Inspector автоматически обнаруживает все инструменты из OpenAPI spec
+- Логи в реальном времени помогают отладить ошибки
+
 ### Настройка окружения
 
 Создай `.env` файл с переменными:
@@ -172,6 +329,10 @@ mcp install r2r_openapi_server.py -v R2R_BASE_URL=http://localhost:7272
 # R2R конфигурация
 R2R_BASE_URL=http://your-r2r-instance:7272
 API_KEY=your_r2r_api_key
+
+# Gemini конфигурация (для Gemini интеграции)
+# Получи API ключ на https://aistudio.google.com/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # FastMCP настройки (для r2r_openapi_server.py)
 FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER=true
@@ -203,7 +364,7 @@ uv sync --extra dev
 ```
 
 **Структура зависимостей (pyproject.toml):**
-- **Production:** fastmcp==2.13.1 (закреплена версия для production), r2r>=3.6.0
+- **Production:** fastmcp==2.13.1 (закреплена версия для production), r2r>=3.6.0, google-genai>=0.2.0
 - **Dev:** ruff>=0.8.0, mypy>=1.14.0
 
 **ВАЖНО:** FastMCP использует закреплённую версию (==2.13.1) по рекомендациям из документации FastMCP, т.к. breaking changes могут происходить в minor версиях. uv.lock включён в git для воспроизводимости зависимостей в production окружении.
