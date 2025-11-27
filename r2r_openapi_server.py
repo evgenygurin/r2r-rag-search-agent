@@ -14,7 +14,7 @@ from google import genai
 load_dotenv()
 
 # Get configuration from environment
-R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://localhost:7272")
+R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://127.0.0.1:7272")
 API_KEY = os.getenv("API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -29,7 +29,8 @@ def create_mcp_server() -> FastMCP:
     client = httpx.AsyncClient(base_url=R2R_BASE_URL, headers=headers)
 
     # Load OpenAPI spec synchronously for module-level initialization
-    with httpx.Client() as temp_client:
+    # Note: Use the same headers for authentication
+    with httpx.Client(headers=headers) as temp_client:
         response = temp_client.get(f"{R2R_BASE_URL}/openapi.json")
         response.raise_for_status()
         openapi_spec = response.json()

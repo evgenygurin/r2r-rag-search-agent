@@ -7,7 +7,7 @@ import os
 # Load environment variables
 load_dotenv()
 
-R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://localhost:7272")
+R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://127.0.0.1:7272")
 API_KEY = os.getenv("API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
