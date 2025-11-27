@@ -21,19 +21,55 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def create_mcp_server() -> FastMCP:
     """Create and configure MCP server with OpenAPI spec."""
+    # Validate API_KEY is set
+    if not API_KEY:
+        raise ValueError(
+            "API_KEY is not set. Please configure it in .env file or environment variables.\n"
+            "Without API_KEY, all R2R API requests will fail with 401 Unauthorized."
+        )
+
     # Create HTTP client for API requests
-    headers: dict[str, str] = {}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    headers: dict[str, str] = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
 
     client = httpx.AsyncClient(base_url=R2R_BASE_URL, headers=headers)
 
     # Load OpenAPI spec synchronously for module-level initialization
     # Note: Use the same headers for authentication
-    with httpx.Client(headers=headers) as temp_client:
-        response = temp_client.get(f"{R2R_BASE_URL}/openapi.json")
-        response.raise_for_status()
-        openapi_spec = response.json()
+    with httpx.Client(headers=headers, timeout=10.0) as temp_client:
+        # Load OpenAPI spec - this also validates server connectivity and auth
+        try:
+            response = temp_client.get(f"{R2R_BASE_URL}/openapi.json")
+            response.raise_for_status()
+            openapi_spec = response.json()
+
+            # Validate OpenAPI spec structure
+            if "paths" not in openapi_spec:
+                raise ValueError("Invalid OpenAPI specification: missing 'paths' field")
+
+        except httpx.ConnectError as e:
+            raise ConnectionError(
+                f"Cannot connect to R2R server at {R2R_BASE_URL}.\n"
+                "Please ensure R2R is running. To start R2R:\n"
+                "  docker run -d -p 7272:7272 ragtoriches/prod:latest\n"
+                f"Or follow: https://r2r-docs.sciphi.ai/installation\n"
+                f"Error details: {e}"
+            )
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise ConnectionError(
+                    f"Authentication failed: 401 Unauthorized.\n"
+                    f"Please check your API_KEY in .env file.\n"
+                    f"Current R2R_BASE_URL: {R2R_BASE_URL}"
+                )
+            else:
+                raise ConnectionError(
+                    f"R2R server returned error {e.response.status_code}.\n"
+                    f"URL: {R2R_BASE_URL}/openapi.json\n"
+                    f"Response: {e.response.text[:200]}"
+                )
 
     # Create MCP server from OpenAPI spec
     mcp = FastMCP.from_openapi(
