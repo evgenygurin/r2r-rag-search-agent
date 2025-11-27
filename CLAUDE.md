@@ -84,10 +84,33 @@ r2r-rag-search-agent/
 - **Автогенерация инструментов:** FastMCP.from_openapi() создаёт MCP tools из OpenAPI спецификации
 - **Новый парсер:** `os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"` устанавливается ДО импортов (r2r_openapi_server.py:4)
 - **Синхронная инициализация:** OpenAPI spec загружается синхронно для совместимости с uvicorn (r2r_openapi_server.py:18-40)
-- **Единый HTTP client:** httpx.AsyncClient с базовым URL и Authorization header для всех запросов
+- **Единый HTTP client:** httpx.AsyncClient с базовым URL и `x-api-key` header для всех запросов
 - **114 маршрутов:** Полный R2R REST API доступен через MCP инструменты
 - **ASGI экспорт:** `app = mcp.http_app(transport="streamable-http", path="/mcp")` для production деплоя (r2r_openapi_server.py:47)
 - **Uvicorn compatibility:** Использует синхронную загрузку спецификации, чтобы избежать `asyncio.run()` конфликта с event loop
+
+**Аутентификация и Security Schemes (r2r_openapi_server.py:32-70):**
+- **R2R SDK совместимость:** Используется `x-api-key` header вместо `Authorization: Bearer` (как в R2R SDK)
+- **Причина:** R2R SDK использует два взаимоисключающих метода аутентификации:
+  - `x-api-key: <key>` для API ключей (наш случай)
+  - `Authorization: Bearer <token>` для OAuth access tokens
+- **OpenAPI spec модификация:** OpenAPI spec от R2R содержит 3 security schemes (HTTPBearer, APIKeyHeader, OAuth2PasswordBearer)
+- **Решение конфликта:** Перед передачей в FastMCP.from_openapi() удаляются HTTPBearer и OAuth2PasswordBearer схемы, остается только APIKeyHeader
+- **Код исправления (r2r_openapi_server.py:57-70):**
+  ```python
+  # Удаляем конфликтующие security schemes
+  if "components" in openapi_spec and "securitySchemes" in openapi_spec["components"]:
+      security_schemes = openapi_spec["components"]["securitySchemes"]
+      openapi_spec["components"]["securitySchemes"] = {
+          "APIKeyHeader": security_schemes.get("APIKeyHeader", {})
+      }
+
+  # Обновляем security requirements
+  if "security" in openapi_spec:
+      openapi_spec["security"] = [{"APIKeyHeader": []}]
+  ```
+- **Ошибка без исправления:** `HTTP 400: Cannot have both Bearer token and API key` при вызове MCP инструментов
+- **Проверка:** Тесты в `test_mcp_call.py` подтверждают, что конфликт устранен
 
 ## 🛠️ Команды разработки
 
@@ -687,6 +710,16 @@ FastMCP автоматически логирует вызовы инструм�
      - Используй синхронную инициализацию: `httpx.Client()` вместо `httpx.AsyncClient()` для загрузки OpenAPI spec
      - Создавай server instance через обычную функцию, а не через `asyncio.run(async_function())`
      - r2r_openapi_server.py:18-40 показывает правильный подход с синхронной загрузкой
+
+10. **`HTTP 400: Cannot have both Bearer token and API key`** при вызове MCP инструментов
+   - **Причина:** OpenAPI spec от R2R содержит 3 security schemes (HTTPBearer, APIKeyHeader, OAuth2PasswordBearer). FastMCP может автоматически добавлять headers для всех схем, вызывая конфликт
+   - **Решение:**
+     - Модифицировать OpenAPI spec перед передачей в `FastMCP.from_openapi()`
+     - Удалить HTTPBearer и OAuth2PasswordBearer схемы, оставив только APIKeyHeader
+     - Обновить security requirements на уровне спецификации: `openapi_spec["security"] = [{"APIKeyHeader": []}]`
+     - См. r2r_openapi_server.py:57-70 для полного кода исправления
+   - **Проверка:** Тесты в `test_mcp_call.py` и `debug_headers.py` подтверждают, что конфликт устранен
+   - **Важно:** R2R SDK использует `x-api-key` header для API ключей (не `Authorization: Bearer`)
 
 ## 📝 Workflow разработки
 

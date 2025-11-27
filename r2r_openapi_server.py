@@ -1,6 +1,4 @@
-import asyncio
 import os
-import sys
 
 # Enable new OpenAPI parser FIRST - before any imports
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
@@ -16,8 +14,8 @@ R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://127.0.0.1:7272")
 API_KEY = os.getenv("API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-from fastmcp import Client, FastMCP
-from google import genai
+from fastmcp import Client, FastMCP  # noqa: E402
+from google import genai  # noqa: E402
 
 
 def create_mcp_server() -> FastMCP:
@@ -25,8 +23,10 @@ def create_mcp_server() -> FastMCP:
     # Validate API_KEY is set
     if not API_KEY:
         raise ValueError(
-            "API_KEY is not set. Please configure it in .env file or environment variables.\n"
-            "Without API_KEY, all R2R API requests will fail with 401 Unauthorized."
+            "API_KEY is not set. Please configure it in .env file or "
+            "environment variables.\n"
+            "Without API_KEY, all R2R API requests will fail with "
+            "401 Unauthorized."
         )
 
     # Prepare headers for authentication (same format as R2R SDK)
@@ -54,6 +54,24 @@ def create_mcp_server() -> FastMCP:
             if "paths" not in openapi_spec:
                 raise ValueError("Invalid OpenAPI specification: missing 'paths' field")
 
+            # ВАЖНО: Удаляем HTTPBearer и OAuth2PasswordBearer схемы из OpenAPI spec
+            # Оставляем только APIKeyHeader (x-api-key), чтобы избежать конфликта
+            # "Cannot have both Bearer token and API key"
+            if (
+                "components" in openapi_spec
+                and "securitySchemes" in openapi_spec["components"]
+            ):
+                security_schemes = openapi_spec["components"]["securitySchemes"]
+                # Сохраняем только APIKeyHeader схему
+                openapi_spec["components"]["securitySchemes"] = {
+                    "APIKeyHeader": security_schemes.get("APIKeyHeader", {})
+                }
+
+            # Обновляем security requirements на уровне спецификации
+            # Используем только APIKeyHeader для всех endpoints
+            if "security" in openapi_spec:
+                openapi_spec["security"] = [{"APIKeyHeader": []}]
+
         except httpx.ConnectError as e:
             raise ConnectionError(
                 f"Cannot connect to R2R server at {R2R_BASE_URL}.\n"
@@ -61,20 +79,20 @@ def create_mcp_server() -> FastMCP:
                 "  docker run -d -p 7272:7272 ragtoriches/prod:latest\n"
                 f"Or follow: https://r2r-docs.sciphi.ai/installation\n"
                 f"Error details: {e}"
-            )
+            ) from e
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise ConnectionError(
                     f"Authentication failed: 401 Unauthorized.\n"
                     f"Please check your API_KEY in .env file.\n"
                     f"Current R2R_BASE_URL: {R2R_BASE_URL}"
-                )
+                ) from e
             else:
                 raise ConnectionError(
                     f"R2R server returned error {e.response.status_code}.\n"
                     f"URL: {R2R_BASE_URL}/openapi.json\n"
                     f"Response: {e.response.text[:200]}"
-                )
+                ) from e
 
     # Create MCP server from OpenAPI spec with authenticated client
     mcp = FastMCP.from_openapi(
