@@ -150,9 +150,11 @@ async def rag(query: str) -> str:
 
 # Create ASGI application for production deployment (Uvicorn, ChatMCP, etc.)
 # Using streamable_http_app for Streamable HTTP transport (recommended for production)
-app = mcp.streamable_http_app()
+# path="/mcp" matches the endpoint expected by ChatMCP and other MCP clients
+app = mcp.streamable_http_app(path="/mcp")
 
 # Run the server if executed directly (for local testing)
 if __name__ == "__main__":
     # For local development, use streamable HTTP transport
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    # Accessible at http://localhost:8000/mcp
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000, path="/mcp")
