@@ -1,5 +1,6 @@
 # R2R FastMCP Server
 # Install: mcp install server.py -v R2R_BASE_URL=http://localhost:7272
+import json
 import logging
 import os
 from typing import Any
@@ -139,20 +140,22 @@ mcp.add_middleware(R2RErrorHandlingMiddleware())
 
 # Resources
 @mcp.resource("r2r://config")
-async def get_r2r_config(ctx: Context) -> dict:
+async def get_r2r_config(ctx: Context) -> str:
     """Get current R2R MCP server configuration."""
     await ctx.info("Retrieving R2R configuration")
 
-    return {
+    config = {
         "r2r_base_url": R2R_BASE_URL,
         "api_key_configured": bool(API_KEY),
         "request_id": ctx.request_id,
         "server_name": "R2R Retrieval System"
     }
 
+    return json.dumps(config, indent=2)
+
 
 @mcp.resource("r2r://health")
-async def check_r2r_health(ctx: Context) -> dict:
+async def check_r2r_health(ctx: Context) -> str:
     """Check R2R server health and connectivity."""
     await ctx.info("Checking R2R server health")
 
@@ -162,19 +165,21 @@ async def check_r2r_health(ctx: Context) -> dict:
             client.set_api_key(API_KEY)
 
         # Simple connectivity check - try to initialize client
-        return {
+        health_data = {
             "status": "healthy",
             "r2r_url": R2R_BASE_URL,
             "timestamp": ctx.request_id,
             "api_key_configured": bool(API_KEY)
         }
+        return json.dumps(health_data, indent=2)
     except Exception as e:
         await ctx.error(f"Health check failed: {e!s}")
-        return {
+        error_data = {
             "status": "unhealthy",
             "error": str(e),
             "r2r_url": R2R_BASE_URL
         }
+        return json.dumps(error_data, indent=2)
 
 
 # Tools
