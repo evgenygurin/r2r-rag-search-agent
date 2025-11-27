@@ -70,7 +70,7 @@ mcp = FastMCP.from_openapi(
 ✅ AsyncClient настроен
    Base URL: http://136.119.36.216:7272
    Headers: {
-     'authorization': 'Bearer key_bsDbiLdGpOgKr9Warewg-w==.ICSVjSbhpVGm7at0i6uzuUKHJb4Oh5mfcfZ64yb3ULI=',
+     'authorization': 'Bearer <REDACTED>',
      'content-type': 'application/json',
      ...
    }
