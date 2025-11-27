@@ -7,8 +7,6 @@ os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
 import httpx
 from dotenv import load_dotenv
-from fastmcp import Client, FastMCP
-from google import genai
 
 # Load environment variables
 load_dotenv()
@@ -17,6 +15,9 @@ load_dotenv()
 R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://127.0.0.1:7272")
 API_KEY = os.getenv("API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+from fastmcp import Client, FastMCP
+from google import genai
 
 
 def create_mcp_server() -> FastMCP:
