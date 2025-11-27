@@ -1,12 +1,6 @@
 # R2R FastMCP Server
 # Install: mcp install server.py -v R2R_BASE_URL=http://localhost:7272
-import os
-import warnings
 from typing import Any
-
-# Suppress deprecation warnings from R2R SDK dependencies
-os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from r2r import R2RClient  # type: ignore[import-untyped]
 
@@ -96,10 +90,10 @@ def format_search_results_for_llm(
 # Create a FastMCP server
 
 try:
-    from mcp.server.fastmcp import FastMCP  # type: ignore[import-untyped]
+    from fastmcp import FastMCP  # type: ignore[import-untyped]
 except Exception as e:
     raise ImportError(
-        "MCP is not installed. Please run `pip install mcp`",
+        "FastMCP is not installed. Please run `pip install fastmcp`",
     ) from e
 
 mcp = FastMCP("R2R Retrieval System")
@@ -149,12 +143,11 @@ async def rag(query: str) -> str:
 
 
 # Create ASGI application for production deployment (Uvicorn, ChatMCP, etc.)
-# Using http_app with streamable-http transport (compatible with older FastMCP versions)
 # path="/mcp" matches the endpoint expected by ChatMCP and other MCP clients
-app = mcp.http_app(transport="streamable-http", path="/mcp")
+app = mcp.http_app(path="/mcp")
 
 # Run the server if executed directly (for local testing)
 if __name__ == "__main__":
-    # For local development, use streamable HTTP transport
+    # For local development, use HTTP transport
     # Accessible at http://localhost:8000/mcp
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000, path="/mcp")
+    mcp.run(transport="http", host="0.0.0.0", port=8000, path="/mcp")
