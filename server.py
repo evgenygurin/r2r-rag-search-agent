@@ -317,6 +317,10 @@ async def graph_search(
     query: str,
     enable_graph: bool = True,
     kg_search_type: str = "local",
+    use_hybrid_search: bool = False,
+    semantic_weight: float = 5.0,
+    full_text_weight: float = 1.0,
+    limit: int = 20,
     ctx: Context | None = None
 ) -> str:
     """
@@ -326,6 +330,10 @@ async def graph_search(
         query: The search query
         enable_graph: Enable knowledge graph integration
         kg_search_type: Type of graph search ("local" or "global")
+        use_hybrid_search: Enable hybrid search (semantic + full-text)
+        semantic_weight: Weight for semantic search (default: 5.0)
+        full_text_weight: Weight for full-text search (default: 1.0)
+        limit: Maximum number of results (default: 20)
 
     Returns:
         Formatted search results with graph context
@@ -339,9 +347,20 @@ async def graph_search(
         client.set_api_key(API_KEY)
 
     search_settings = {
-        "limit": 20,
+        "limit": limit,
         "use_semantic_search": True,
     }
+
+    if use_hybrid_search:
+        search_settings["use_hybrid_search"] = True
+        search_settings["hybrid_settings"] = {
+            "semantic_weight": semantic_weight,
+            "full_text_weight": full_text_weight,
+            "full_text_limit": 200,
+            "rrf_k": 50
+        }
+        if ctx:
+            await ctx.info("Hybrid search enabled")
 
     if enable_graph:
         search_settings["graph_search_settings"] = {

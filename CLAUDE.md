@@ -246,26 +246,34 @@ result = await advanced_search(
 - `full_text_limit`: 200 (количество full-text результатов для обработки)
 - `rrf_k`: 50 (параметр Reciprocal Rank Fusion)
 
-#### `graph_search(query, enable_graph=True, kg_search_type="local") -> str`
-**Описание:** Поиск с интеграцией knowledge graph
+#### `graph_search(query, enable_graph=True, kg_search_type="local", use_hybrid_search=False, semantic_weight=5.0, full_text_weight=1.0, limit=20) -> str`
+**Описание:** Поиск с интеграцией knowledge graph и опциональным hybrid search
 **Annotations:** readOnlyHint=True, openWorldHint=True
 
 **Параметры:**
 - `enable_graph` (bool): Включить knowledge graph integration
 - `kg_search_type` (str): Тип graph search ("local" или "global")
+- `use_hybrid_search` (bool): Включить hybrid search (semantic + full-text)
+- `semantic_weight` (float): Вес для semantic search (default: 5.0)
+- `full_text_weight` (float): Вес для full-text search (default: 1.0)
+- `limit` (int): Максимальное количество результатов (default: 20)
 
 ```python
-# Пример с knowledge graph
+# Пример с knowledge graph и hybrid search
 result = await graph_search(
     query="relationships between machine learning concepts",
     enable_graph=True,
-    kg_search_type="local"
+    kg_search_type="local",
+    use_hybrid_search=True,
+    semantic_weight=7.0,
+    limit=25
 )
 ```
 
 **Особенности:**
-- `limit` автоматически установлен в 20 для лучшего покрытия graph results
+- Комбинирует knowledge graph с hybrid search для максимальной точности
 - Возвращает entities, relationships и communities из knowledge graph
+- Поддерживает все параметры hybrid search из `advanced_search`
 
 #### `advanced_rag(query, model="openai/gpt-4o-mini", temperature=0.7, use_hybrid_search=False, include_web_search=False) -> str`
 **Описание:** RAG с настраиваемой генерацией
