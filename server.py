@@ -117,6 +117,8 @@ async def search(query: str) -> str:
         A response generated based on relevant context from the knowledge base
     """
     client = R2RClient(base_url=R2R_BASE_URL)
+    if API_KEY:
+        client.set_api_key(API_KEY)
 
     # Call the RAG endpoint
     search_response = client.retrieval.search(
@@ -138,6 +140,8 @@ async def rag(query: str) -> str:
         A response generated based on relevant context from the knowledge base
     """
     client = R2RClient(base_url=R2R_BASE_URL)
+    if API_KEY:
+        client.set_api_key(API_KEY)
 
     # Call the RAG endpoint
     rag_response = client.retrieval.rag(
