@@ -69,10 +69,9 @@ def create_mcp_server() -> FastMCP:
                     "APIKeyHeader": security_schemes.get("APIKeyHeader", {})
                 }
 
-            # Обновляем security requirements на уровне спецификации
-            # Используем только APIKeyHeader для всех endpoints
-            if "security" in openapi_spec:
-                openapi_spec["security"] = [{"APIKeyHeader": []}]
+            # Устанавливаем security requirements на уровне спецификации
+            # Используем только APIKeyHeader для всех endpoints (всегда, не только если есть)
+            openapi_spec["security"] = [{"APIKeyHeader": []}]
 
             # КРИТИЧНО: УДАЛЯЕМ все security requirements на уровне операций
             # Оставляем только глобальный security, чтобы избежать конфликтов
