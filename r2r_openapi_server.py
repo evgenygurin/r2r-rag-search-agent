@@ -72,6 +72,27 @@ def create_mcp_server() -> FastMCP:
             if "security" in openapi_spec:
                 openapi_spec["security"] = [{"APIKeyHeader": []}]
 
+            # КРИТИЧНО: Обновляем security requirements на уровне каждой операции
+            # FastMCP использует security из operations, не только глобальные
+            if "paths" in openapi_spec:
+                for path_item in openapi_spec["paths"].values():
+                    for method, operation in path_item.items():
+                        if (
+                            method
+                            in [
+                                "get",
+                                "post",
+                                "put",
+                                "patch",
+                                "delete",
+                                "options",
+                                "head",
+                            ]
+                            and isinstance(operation, dict)
+                            and "security" in operation
+                        ):
+                            operation["security"] = [{"APIKeyHeader": []}]
+
         except httpx.ConnectError as e:
             raise ConnectionError(
                 f"Cannot connect to R2R server at {R2R_BASE_URL}.\n"
