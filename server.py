@@ -148,18 +148,10 @@ async def rag(query: str) -> str:
     return rag_response.results.generated_answer  # type: ignore
 
 
-# Run the server if executed directly
-if __name__ == "__main__":
-    import asyncio
+# Create ASGI application for production deployment (Uvicorn, ChatMCP, etc.)
+app = mcp.http_app()
 
-    try:
-        # Try to run normally (creates new event loop)
-        mcp.run(transport="stdio")
-    except RuntimeError as e:
-        if "asyncio" in str(e).lower() or "event loop" in str(e).lower():
-            # Event loop already running - use it directly
-            # This happens in some deployment environments
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(mcp.run_async())
-        else:
-            raise
+# Run the server if executed directly (for local testing)
+if __name__ == "__main__":
+    # For local development, use HTTP transport
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
