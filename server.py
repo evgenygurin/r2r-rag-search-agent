@@ -6,7 +6,11 @@ import os
 from enum import Enum
 from typing import Any, Literal
 
+from dotenv import load_dotenv
 from r2r import R2RClient  # type: ignore[import-untyped]
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configuration
 R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://localhost:7272")
