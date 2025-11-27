@@ -1,6 +1,12 @@
 # R2R FastMCP Server
 # Install: mcp install server.py -v R2R_BASE_URL=http://localhost:7272
+import os
+import warnings
 from typing import Any
+
+# Suppress deprecation warnings from R2R SDK dependencies
+os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from r2r import R2RClient  # type: ignore[import-untyped]
 
@@ -144,4 +150,16 @@ async def rag(query: str) -> str:
 
 # Run the server if executed directly
 if __name__ == "__main__":
-    mcp.run()
+    import asyncio
+
+    try:
+        # Try to run normally (creates new event loop)
+        mcp.run(transport="stdio")
+    except RuntimeError as e:
+        if "asyncio" in str(e).lower() or "event loop" in str(e).lower():
+            # Event loop already running - use it directly
+            # This happens in some deployment environments
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(mcp.run_async())
+        else:
+            raise
