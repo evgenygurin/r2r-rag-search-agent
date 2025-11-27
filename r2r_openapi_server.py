@@ -70,8 +70,9 @@ async def run_with_gemini(query: str, model: str = "gemini-2.0-flash") -> str:
             "GEMINI_API_KEY not set. Please configure it in .env file or environment."
         )
 
-    # Create MCP client pointing to this server
-    mcp_client = Client(__file__)
+    # Create MCP client pointing to simplified server.py (2 tools: search, rag)
+    # Note: Using server.py instead of __file__ to avoid complex OpenAPI schemas
+    mcp_client = Client("server.py")
 
     # Create Gemini client
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)

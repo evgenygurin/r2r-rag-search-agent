@@ -179,11 +179,12 @@ mcp install r2r_openapi_server.py -v R2R_BASE_URL=http://localhost:7272
 ### Gemini интеграция
 
 **Описание:**
-`r2r_openapi_server.py` поддерживает прямую интеграцию с Google Gemini SDK через FastMCP Client. Это позволяет использовать все 114 R2R API инструментов в Gemini без необходимости запуска отдельного MCP сервера.
+`r2r_openapi_server.py` поддерживает прямую интеграцию с Google Gemini SDK через FastMCP Client. Gemini использует упрощённый `server.py` с 2 базовыми инструментами (search, rag), которые поддерживают все параметры включая пресеты.
 
 **Архитектура:**
 - Gemini SDK напрямую взаимодействует с MCP Client session (r2r_openapi_server.py:54-89)
-- FastMCP Client создаётся в stdio режиме, указывая на текущий файл
+- FastMCP Client подключается к `server.py` (2 инструмента: search, rag)
+- **Почему server.py, а не r2r_openapi_server.py?** OpenAPI сервер имеет 114 инструмента с сложными схемами, которые Gemini API не может обработать. Упрощённый server.py предоставляет 2 мощных инструмента с пресетами
 - Gemini автоматически вызывает MCP tools при необходимости
 - Поддержка всех Gemini моделей (gemini-2.0-flash, gemini-1.5-pro и т.д.)
 
@@ -228,7 +229,7 @@ result = asyncio.run(run_with_gemini(
 **Особенности:**
 
 - **Автоматический вызов tools:** Gemini самостоятельно решает, когда использовать R2R инструменты
-- **114 доступных инструментов:** Полный R2R API доступен через автогенерацию из OpenAPI spec
+- **2 мощных инструмента:** search и rag с поддержкой всех параметров и пресетов (default, development, refactoring, debug, research, production)
 - **Температура настраивается:** Дефолт 0.7, можно изменить в `run_with_gemini()`
 - **Async-native:** Вся интеграция построена на asyncio для производительности
 
@@ -242,8 +243,10 @@ result = asyncio.run(run_with_gemini(
 
 **Важно:**
 - Требуется google-genai>=0.2.0 (добавлена в pyproject.toml)
-- MCP Client создаётся с `__file__`, поэтому работает только из директории проекта
+- MCP Client подключается к `server.py` (не к `r2r_openapi_server.py`!), чтобы избежать сложных схем из 114 инструментов OpenAPI
+- Доступны 2 инструмента: `search` и `rag` с полной поддержкой параметров и пресетов
 - Gemini SDK требует `GEMINI_API_KEY` в переменных окружения
+- r2r_openapi_server.py:73-75 — создание MCP Client для server.py
 - r2r_openapi_server.py:54-89 — реализация `run_with_gemini()`
 - r2r_openapi_server.py:92-105 — CLI интерфейс для Gemini режима
 
